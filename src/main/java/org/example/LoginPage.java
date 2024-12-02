@@ -1,4 +1,4 @@
-package org.example.pom;
+package org.example;
 
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -11,14 +11,17 @@ public class LoginPage {
 
     private final WebDriverWait wait;
 
-    @FindBy(css="form#login input[type='text']")
+    @FindBy(xpath="//*[@type='text']")
     private WebElement usernameField;
 
-    @FindBy(css="form#login input[type='password']")
+    @FindBy(xpath="//*[@type='password']")
     private WebElement passwordField;
 
-    @FindBy(css="form#login button")
+    @FindBy(xpath="//*[@class='mdc-button__label']")
     private WebElement loginButton;
+
+    @FindBy(xpath="//*[@class='error-block svelte-uwkxn9']")
+    private WebElement errorBlock;
 
     public LoginPage(WebDriver driver, WebDriverWait wait) {
         PageFactory.initElements(driver, this);
@@ -41,6 +44,12 @@ public class LoginPage {
 
     public void clickLoginButton() {
         wait.until(ExpectedConditions.visibilityOf(loginButton)).click();
+    }
+
+    public String getErrorBlockText() {
+        return wait.until(ExpectedConditions.visibilityOf(errorBlock))
+                .getText()
+                .replace("\n", " ");
     }
 
 }

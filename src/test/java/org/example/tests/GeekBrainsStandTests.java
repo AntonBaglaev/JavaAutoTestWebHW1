@@ -1,12 +1,12 @@
 package org.example.tests;
 
-import org.example.pom.MainPage;
+import org.example.MainPage;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import org.example.pom.LoginPage;
+import org.example.LoginPage;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,7 +43,6 @@ public class GeekBrainsStandTests {
     @Test
     public void testAddingGroupOnMainPage() {
         checkLogin();
-        // Создание группы. Даём ей уникальное имя, чтобы в каждом запуске была проверка нового имени
         String groupTestName = "New Test Group " + System.currentTimeMillis();
         mainPage.createGroup(groupTestName);
     }
@@ -61,6 +60,35 @@ public class GeekBrainsStandTests {
         assertEquals("inactive", mainPage.getStatusOfGroupWithTitle(groupTestName));
         mainPage.clickRestoreFromTrashIconOnGroupWithTitle(groupTestName);
         assertEquals("active", mainPage.getStatusOfGroupWithTitle(groupTestName));
+    }
+
+    @Test
+    void authorizationWithoutEnteringLoginAndPasswordShouldReturnTest() throws IOException {
+        loginPage.clickLoginButton();
+        assertEquals("401 Invalid credentials.", loginPage.getErrorBlockText());
+        getScreen();
+    }
+
+    @Test
+    void studentStatusActiveOrInactiveTest() throws IOException {
+        String groupName = "New Test Group " + System.currentTimeMillis();
+        mainPage.createGroup(groupName);
+        mainPage.closeCreateGroupModalWindow();
+        int studentQuantity = 2;
+        mainPage.clickOnCreatingNewLoginsStudentsByTitle(groupName);
+        mainPage.enteringTheNumberOfNewLoginsStudents(studentQuantity);
+        mainPage.clickSaveNumberNewLoginsStudents();
+        mainPage.clickCloseNewLoginsStudentsForm();
+        mainPage.waitForChangeNumberOfLoginsStudents(groupName, studentQuantity);
+        mainPage.clickOnStudentsIdentitiesByTitle(groupName);
+        int studentIndex = 0;
+        String studentUsername = mainPage.getStudentUsernameByIndex(studentIndex);
+        assertEquals("active", mainPage.getStatusOfStudentByUsername(studentUsername));
+        mainPage.clickTrashIconOnStudentByUsername(studentUsername);
+        assertEquals("block", mainPage.getStatusOfStudentByUsername(studentUsername));
+        mainPage.clickRestoreFromTrashIconOnStudentByUsername(studentUsername);
+        assertEquals("active", mainPage.getStatusOfStudentByUsername(studentUsername));
+        getScreen();
     }
 
     @Test
