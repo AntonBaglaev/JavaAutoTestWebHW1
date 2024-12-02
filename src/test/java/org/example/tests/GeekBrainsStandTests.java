@@ -1,10 +1,12 @@
-package org.example;
+package org.example.tests;
 
+import org.example.pom.MainPage;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.example.pom.LoginPage;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,10 +14,13 @@ import java.nio.file.Path;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class PerfectGeekBrainsTests {
+public class GeekBrainsStandTests {
     private WebDriver driver;
     private WebDriverWait wait;
+    private LoginPage loginPage;
+    private MainPage mainPage;
     private static String USERNAME;
     private static String PASSWORD;
 
@@ -31,6 +36,31 @@ public class PerfectGeekBrainsTests {
         driver = new ChromeDriver();
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         driver.manage().window().maximize();
+        driver.get("https://test-stand.gb.ru/login");
+        loginPage = new LoginPage(driver, wait);
+    }
+
+    @Test
+    public void testAddingGroupOnMainPage() {
+        checkLogin();
+        // Создание группы. Даём ей уникальное имя, чтобы в каждом запуске была проверка нового имени
+        String groupTestName = "New Test Group " + System.currentTimeMillis();
+        mainPage.createGroup(groupTestName);
+    }
+
+    @Test
+    void testArchiveGroupOnMainPage() {
+        checkLogin();
+        String groupTestName = "New Test Group " + System.currentTimeMillis();
+        mainPage.createGroup(groupTestName);
+        // Требуется закрыть модальное окно
+        mainPage.closeCreateGroupModalWindow();
+        // Изменение созданной группы с проверками
+        assertEquals("active", mainPage.getStatusOfGroupWithTitle(groupTestName));
+        mainPage.clickTrashIconOnGroupWithTitle(groupTestName);
+        assertEquals("inactive", mainPage.getStatusOfGroupWithTitle(groupTestName));
+        mainPage.clickRestoreFromTrashIconOnGroupWithTitle(groupTestName);
+        assertEquals("active", mainPage.getStatusOfGroupWithTitle(groupTestName));
     }
 
     @Test
@@ -72,6 +102,15 @@ public class PerfectGeekBrainsTests {
         byte[] screenshotBytes = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
         Files.write(Path.of(
                 "src/main/resources/screenshot_" + System.currentTimeMillis() + ".png"), screenshotBytes);
+    }
+
+    private void checkLogin() {
+        // Логин в систему с помощью метода из класса Page Object
+        loginPage.login(USERNAME, PASSWORD);
+        // Инициализация объекта класса MainPage
+        mainPage = new MainPage(driver, wait);
+        // Проверка, что логин прошёл успешно
+        assertTrue(mainPage.getUsernameLabelText().contains(USERNAME));
     }
 
     @AfterEach
