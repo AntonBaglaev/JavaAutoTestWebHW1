@@ -20,42 +20,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GeekBrainsStandTests {
     private WebDriver driver;
-    private WebDriverWait wait;
     private LoginPage loginPage;
     private MainPage mainPage;
-    private static String USERNAME;
-    private static String PASSWORD;
 
-    @BeforeAll
-    public static void setupClass() {
-        USERNAME = System.getProperty("geekbrains_username", System.getenv("geekbrains_username"));
-        PASSWORD = System.getProperty("geekbrains_password", System.getenv("geekbrains_password"));
-    }
+    private static final String login = "Student-23";
+    private static final String password = "8af250c861";
+    private static final String fullName = "23 Student";
+    private static final String baseURL = "https://test-stand.gb.ru/login";
+
 
     @BeforeEach
-    public void setupTest() {
-        Selenide.open("https://test-stand.gb.ru/login");
+    public void setUp() {
+        Selenide.open(baseURL);
         driver = WebDriverRunner.getWebDriver();
-        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        driver.get("https://test-stand.gb.ru/login");
-        loginPage = new LoginPage(driver, wait);
     }
 
     @Test
-    public void testAddingGroupOnMainPage() {
-        checkLogin();
+    public void groupAddingTest()  {
+        successfulAuthorization();
         String groupTestName = "New Test Group " + System.currentTimeMillis();
+        MainPage mainPage = Selenide.page(MainPage.class);
         mainPage.createGroup(groupTestName);
     }
 
     @Test
-    void testArchiveGroupOnMainPage() {
-        checkLogin();
+    void groupStatusActiveOrInactiveTest() {
+        successfulAuthorization();
         String groupTestName = "New Test Group " + System.currentTimeMillis();
+        MainPage mainPage = Selenide.page(MainPage.class);
         mainPage.createGroup(groupTestName);
-        // Требуется закрыть модальное окно
         mainPage.closeCreateGroupModalWindow();
-        // Изменение созданной группы с проверками
         assertEquals("active", mainPage.getStatusOfGroupWithTitle(groupTestName));
         mainPage.clickTrashIconOnGroupWithTitle(groupTestName);
         assertEquals("inactive", mainPage.getStatusOfGroupWithTitle(groupTestName));
@@ -64,15 +58,18 @@ public class GeekBrainsStandTests {
     }
 
     @Test
-    void authorizationWithoutEnteringLoginAndPasswordShouldReturnTest() throws IOException {
+    void authorizationWithoutEnteringLoginAndPasswordShouldReturnTest()  {
+        LoginPage loginPage = Selenide.page(LoginPage.class);
         loginPage.clickLoginButton();
         assertEquals("401 Invalid credentials.", loginPage.getErrorBlockText());
         getScreen();
     }
 
     @Test
-    void studentStatusActiveOrInactiveTest() throws IOException {
+    void studentStatusActiveOrInactiveTest()  {
+        successfulAuthorization();
         String groupName = "New Test Group " + System.currentTimeMillis();
+        MainPage mainPage = Selenide.page(MainPage.class);
         mainPage.createGroup(groupName);
         mainPage.closeCreateGroupModalWindow();
         int studentQuantity = 2;
@@ -93,69 +90,30 @@ public class GeekBrainsStandTests {
     }
 
     @Test
-    public void testStandGeekBrains() throws IOException {
-        driver.get("https://test-stand.gb.ru/login");
-        wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("form#login input[type='text']"))).sendKeys(USERNAME);
-        wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("form#login input[type='password']"))).sendKeys(PASSWORD);
-
-        WebElement loginButton = driver.findElement(By.cssSelector("form#login button"));
-        loginButton.click();
-        wait.until(ExpectedConditions.invisibilityOf(loginButton));
-
-        WebElement usernameLink = wait.until(ExpectedConditions.visibilityOfElementLocated(By.partialLinkText(USERNAME)));
-        assertEquals(String.format("Hello, %s", USERNAME), usernameLink.getText().replace("\n", " ").trim());
-        //getScreen();
-    }
-
-    @Test
-    void groupAddingTest() throws  IOException {
-        testStandGeekBrains();
-        String groupName = "New Study Group " + System.currentTimeMillis();
-        WebElement createGroup = wait.until(ExpectedConditions.presenceOfElementLocated(
-                By.xpath("//*[@id='create-btn']")));
-        createGroup.click();
-        By fieldGroupName = By.xpath("//*[@type='text']");
-        wait.until(ExpectedConditions.visibilityOfElementLocated(fieldGroupName)).sendKeys(groupName);
-        WebElement buttonSaveGroup = wait.until(ExpectedConditions.presenceOfElementLocated(
-                By.cssSelector("form div.submit button")));
-        buttonSaveGroup.click();
-
-        String tableTitleXpath = "//td[contains(text(), '%s')]";
-        WebElement expectedTitle = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.xpath(String.format(tableTitleXpath, groupName))));
-        Assertions.assertTrue(expectedTitle.isDisplayed());
-        getScreen();
-    }
-
-    @Test
-    void testFullNameOnProfilePage() {
-        loginPage.login(USERNAME, PASSWORD);
-        mainPage = new MainPage(driver, wait);
-        assertTrue(mainPage.getUsernameLabelText().contains(USERNAME));
-        mainPage.clickUsernameLabel();
-        mainPage.clickProfileLink();
+    void valueFullNameInProfilePageTest() {
+        successfulAuthorization();
+        MainPage mainPage = Selenide.page(MainPage.class);
+        mainPage.clickProfileButton();
         ProfilePage profilePage = Selenide.page(ProfilePage.class);
-        assertEquals("Kornyshev Evgenii", profilePage.getFullNameFromAdditionalInfo());
-        assertEquals("Kornyshev Evgenii", profilePage.getFullNameFromAvatarSection());
+        assertEquals(fullName, profilePage.getFullNameInAdditionalInfo());
+        assertEquals(fullName, profilePage.getFullNameUnderAvatar());
     }
 
-    private void getScreen() throws IOException {
-        byte[] screenshotBytes = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-        Files.write(Path.of(
-                "src/main/resources/screenshot_" + System.currentTimeMillis() + ".png"), screenshotBytes);
+
+    private void successfulAuthorization() {
+        LoginPage loginPage = Selenide.page(LoginPage.class);
+        loginPage.login(login, password);
+        MainPage mainPage = Selenide.page(MainPage.class);
+        assertTrue(mainPage.getUsernameLabelText().contains(login));
     }
 
-    private void checkLogin() {
-        // Логин в систему с помощью метода из класса Page Object
-        loginPage.login(USERNAME, PASSWORD);
-        // Инициализация объекта класса MainPage
-        mainPage = new MainPage(driver, wait);
-        // Проверка, что логин прошёл успешно
-        assertTrue(mainPage.getUsernameLabelText().contains(USERNAME));
+    private void getScreen()  {
+        Selenide.screenshot("screenshot_" + System.currentTimeMillis());
     }
+
 
     @AfterEach
-    public void teardown() {
+    public void closeApp() {
         WebDriverRunner.closeWebDriver();
     }
 }
