@@ -1,9 +1,11 @@
 package org.example.tests;
 
+import com.codeborne.selenide.Selenide;
+import com.codeborne.selenide.WebDriverRunner;
 import org.example.MainPage;
+import org.example.ProfilePage;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.example.LoginPage;
@@ -26,16 +28,15 @@ public class GeekBrainsStandTests {
 
     @BeforeAll
     public static void setupClass() {
-        System.setProperty("webdriver.chrome.driver", "src\\main\\resources\\chromedriver.exe");
         USERNAME = System.getProperty("geekbrains_username", System.getenv("geekbrains_username"));
         PASSWORD = System.getProperty("geekbrains_password", System.getenv("geekbrains_password"));
     }
 
     @BeforeEach
     public void setupTest() {
-        driver = new ChromeDriver();
+        Selenide.open("https://test-stand.gb.ru/login");
+        driver = WebDriverRunner.getWebDriver();
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        driver.manage().window().maximize();
         driver.get("https://test-stand.gb.ru/login");
         loginPage = new LoginPage(driver, wait);
     }
@@ -126,6 +127,18 @@ public class GeekBrainsStandTests {
         getScreen();
     }
 
+    @Test
+    void testFullNameOnProfilePage() {
+        loginPage.login(USERNAME, PASSWORD);
+        mainPage = new MainPage(driver, wait);
+        assertTrue(mainPage.getUsernameLabelText().contains(USERNAME));
+        mainPage.clickUsernameLabel();
+        mainPage.clickProfileLink();
+        ProfilePage profilePage = Selenide.page(ProfilePage.class);
+        assertEquals("Kornyshev Evgenii", profilePage.getFullNameFromAdditionalInfo());
+        assertEquals("Kornyshev Evgenii", profilePage.getFullNameFromAvatarSection());
+    }
+
     private void getScreen() throws IOException {
         byte[] screenshotBytes = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
         Files.write(Path.of(
@@ -143,6 +156,6 @@ public class GeekBrainsStandTests {
 
     @AfterEach
     public void teardown() {
-        driver.quit();
+        WebDriverRunner.closeWebDriver();
     }
 }

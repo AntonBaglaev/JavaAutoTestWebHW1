@@ -1,5 +1,8 @@
 package org.example;
 
+import com.codeborne.selenide.ElementsCollection;
+import com.codeborne.selenide.SelenideElement;
+import org.example.pom.elements.GroupTableRow;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -10,145 +13,126 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.util.List;
 
+import static com.codeborne.selenide.CollectionCondition.sizeGreaterThan;
+import static com.codeborne.selenide.Condition.visible;
+import static com.codeborne.selenide.Selenide.*;
+
 public class MainPage {
 
-    private final WebDriverWait wait;
-
-    public MainPage(WebDriver driver, WebDriverWait wait) {
-        this.wait = wait;
-        PageFactory.initElements(driver, this);
-    }
     @FindBy(css = "nav li.mdc-menu-surface--anchor a")
-    private WebElement usernameInMenu;
+    private SelenideElement usernameLinkInNavBar;
+    @FindBy(xpath = "//nav//li[contains(@class,'mdc-menu-surface--anchor')]//span[text()='Profile']")
+    private SelenideElement profileLinkInNavBar;
+    private final SelenideElement createGroupButton = $("#create-btn");
+    private final SelenideElement groupNameField = $x("//form//span[contains(text(), 'Group name')]/following-sibling::input");
+    private final SelenideElement submitButtonOnModalWindow = $("form div.submit button");
+    private final SelenideElement closeCreateGroupIcon = $x("//span[text()='Creating Study Group']" +
+            "//ancestor::div[contains(@class, 'form-modal-header')]//button");
+    private final SelenideElement createStudentsFormInput = $("div#generateStudentsForm-content input");
+    private final SelenideElement saveCreateStudentsForm = $("div#generateStudentsForm-content div.submit button");
+    private final SelenideElement closeCreateStudentsFormIcon = $x("//h2[@id='generateStudentsForm-title']/../button");
+    private final ElementsCollection rowsInGroupTable = $$x("//table[@aria-label='Tutors list']/tbody/tr");
+    private final ElementsCollection rowsInStudentTable = $$x("//table[@aria-label='User list']/tbody/tr");
 
-    // Group table block
-    @FindBy(xpath = "//*[@id='create-btn']")
-    private WebElement createGroupButton;
-
-    @FindBy(xpath = "//*[@type='text']")
-    private WebElement groupNameField;
-
-    @FindBy(css = "form div.submit button")
-    private WebElement submitButtonOnModalWindow;
-
-    @FindBy(xpath = "//span[text()='Creating Study Group']"
-            + "//ancestor::div[contains(@class, 'form-modal-header')]//button")
-    private WebElement closeCreateGroupIcon;
-
-    @FindBy(xpath = "//table[@aria-label='Tutors list']/tbody/tr")
-    private List<WebElement> rowsInGroupTable;
-
-
-    // Students table block
-    @FindBy(xpath = "//*[@type='number']")
-    private WebElement creatingNewLoginsStudentsInput;
-
-    @FindBy(css = "div#generateStudentsForm-content div.submit button")
-    private WebElement saveNumberNewLoginsStudents;
-
-    @FindBy(xpath = "//h2[@id='generateStudentsForm-title']/../button")
-    private WebElement closeNewLoginsStudentsForm;
-
-    @FindBy(xpath = "//table[@aria-label='User list']/tbody/tr")
-    private List<WebElement> rowsInStudentsIdentitiesTable;
-
-
-    // Group table block
-    public void waitGroupTitleByText(String title) {
-        String xpath = String.format("//table[@aria-label='Tutors list']/tbody//td[text()='%s']", title);
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath(xpath)));
+    public SelenideElement waitAndGetGroupTitleByText(String title) {
+        return $x(String.format("//table[@aria-label='Tutors list']/tbody//td[text()='%s']", title)).shouldBe(visible);
     }
 
     public void createGroup(String groupName) {
-        wait.until(ExpectedConditions.visibilityOf(createGroupButton)).click();
-        wait.until(ExpectedConditions.visibilityOf(groupNameField)).sendKeys(groupName);
-        wait.until(ExpectedConditions.textToBePresentInElementValue(groupNameField, groupName));
-        submitButtonOnModalWindow.click();
-        waitGroupTitleByText(groupName);
+        createGroupButton.shouldBe(visible).click();
+        groupNameField.shouldBe(visible).setValue(groupName);
+        submitButtonOnModalWindow.shouldBe(visible).click();
+        waitAndGetGroupTitleByText(groupName);
     }
 
     public void closeCreateGroupModalWindow() {
-        closeCreateGroupIcon.click();
-        wait.until(ExpectedConditions.invisibilityOf(closeCreateGroupIcon));
+        closeCreateGroupIcon.shouldBe(visible).click();
+    }
+
+    public void typeAmountOfStudentsInCreateStudentsForm(int amount) {
+        createStudentsFormInput.shouldBe(visible).setValue(String.valueOf(amount));
+    }
+
+    public void clickSaveButtonOnCreateStudentsForm() {
+        saveCreateStudentsForm.shouldBe(visible).click();
+    }
+
+    public void closeCreateStudentsModalWindow() {
+        closeCreateStudentsFormIcon.click();
+    }
+
+    public void clickUsernameLabel() {
+        usernameLinkInNavBar.shouldBe(visible).click();
+    }
+
+    public void clickProfileLink() {
+        profileLinkInNavBar.shouldBe(visible).click();
     }
 
     public String getUsernameLabelText() {
-        return wait.until(ExpectedConditions.visibilityOf(usernameInMenu))
-                .getText().replace("\n", " ");
+        return usernameLinkInNavBar.shouldBe(visible).getText().replace("\n", " ");
     }
 
+    // Group Table Section
     public void clickTrashIconOnGroupWithTitle(String title) {
-        getRowByTitle(title).clickTrashIcon();
+        getGroupRowByTitle(title).clickTrashIcon();
     }
 
     public void clickRestoreFromTrashIconOnGroupWithTitle(String title) {
-        getRowByTitle(title).clickRestoreFromTrashIcon();
+        getGroupRowByTitle(title).clickRestoreFromTrashIcon();
+    }
+
+    public void clickAddStudentsIconOnGroupWithTitle(String title) {
+        getGroupRowByTitle(title).clickAddStudentsIcon();
+    }
+
+    public void clickZoomInIconOnGroupWithTitle(String title) {
+        getGroupRowByTitle(title).clickZoomInIcon();
     }
 
     public String getStatusOfGroupWithTitle(String title) {
-        return getRowByTitle(title).getStatus();
+        return getGroupRowByTitle(title).getStatus();
     }
 
-    private ElementGroupTablePage getRowByTitle(String title) {
-        return rowsInGroupTable.stream()
-                .map(ElementGroupTablePage::new)
-                .filter(x -> x.getTitle().equals(title))
-                .findFirst()
-                .orElseThrow();
+    public void waitStudentsCount(String groupTestName, int studentsCount) {
+        getGroupRowByTitle(groupTestName).waitStudentsCount(studentsCount);
     }
 
-
-    // Students table block
-    public void clickOnCreatingNewLoginsStudentsByTitle(String title) {
-        getRowByTitle(title).clickOnCreatingNewLoginsStudentsIcon();
+    private GroupTableRow getGroupRowByTitle(String title) {
+        return rowsInGroupTable.shouldHave(sizeGreaterThan(0))
+                .asDynamicIterable().stream()
+                .map(GroupTableRow::new)
+                .filter(row -> row.getTitle().equals(title))
+                .findFirst().orElseThrow();
     }
 
-    public void enteringTheNumberOfNewLoginsStudents(int studentQuantity) {
-        wait.until(ExpectedConditions.visibilityOf(creatingNewLoginsStudentsInput))
-                .sendKeys(String.valueOf(studentQuantity));
+    // Students Table Section
+
+    public void clickTrashIconOnStudentWithName(String name) {
+        getStudentRowByName(name).clickTrashIcon();
     }
 
-    public void clickSaveNumberNewLoginsStudents(){
-        wait.until(ExpectedConditions.visibilityOf(saveNumberNewLoginsStudents)).click();
+    public void clickRestoreFromTrashIconOnStudentWithName(String name) {
+        getStudentRowByName(name).clickRestoreFromTrashIcon();
     }
 
-    public void clickCloseNewLoginsStudentsForm() {
-        closeNewLoginsStudentsForm.click();
-        wait.until(ExpectedConditions.invisibilityOf(closeNewLoginsStudentsForm));
+    public String getStatusOfStudentWithName(String name) {
+        return getStudentRowByName(name).getStatus();
     }
 
-    public void clickOnStudentsIdentitiesByTitle(String title) {
-        getRowByTitle(title).clickOnStudentsIdentitiesIcon();
+    public String getStudentNameByIndex(int index) {
+        return rowsInStudentTable.shouldHave(sizeGreaterThan(0))
+                .asDynamicIterable().stream()
+                .map(StudentTableRow::new)
+                .toList().get(index).getName();
     }
 
-    public String getStudentUsernameByIndex(int studentIndex){
-        wait.until(ExpectedConditions.visibilityOfAllElements(rowsInStudentsIdentitiesTable));
-        return rowsInStudentsIdentitiesTable.stream()
-                .map(ElementStudentTablePage::new)
-                .toList().get(studentIndex).getName();
-    }
-
-    public void waitForChangeNumberOfLoginsStudents(String groupName, int quantityStudent) {
-        getRowByTitle(groupName).waitForChangeNumberOfLoginsStudents(quantityStudent);
-    }
-
-    public void clickTrashIconOnStudentByUsername(String username) {
-        getStudentRowUsername(username).clickTrashIcon();
-    }
-
-    public void clickRestoreFromTrashIconOnStudentByUsername(String username) {
-        getStudentRowUsername(username).clickRestoreFromTrashIcon();
-    }
-
-    public String getStatusOfStudentByUsername(String username) {
-        return getStudentRowUsername(username).getStatus();
-    }
-
-    private ElementStudentTablePage getStudentRowUsername(String name) {
-        wait.until(ExpectedConditions.visibilityOfAllElements(rowsInStudentsIdentitiesTable));
-        return rowsInStudentsIdentitiesTable.stream()
-                .map(ElementStudentTablePage::new)
+    private StudentTableRow getStudentRowByName(String name) {
+        return rowsInStudentTable.shouldHave(sizeGreaterThan(0))
+                .asDynamicIterable().stream()
+                .map(StudentTableRow::new)
                 .filter(row -> row.getName().equals(name))
                 .findFirst().orElseThrow();
     }
+
 }
